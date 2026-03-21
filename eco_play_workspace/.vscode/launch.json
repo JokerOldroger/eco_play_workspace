@@ -1,0 +1,34 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Flask Backend",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/src/app.py",
+      "cwd": "${workspaceFolder}/backend/src",
+      "envFile": "${workspaceFolder}/backend/.env",
+      "jinja": true,
+      "justMyCode": false,
+      "env": {
+        "FLASK_APP": "app.py",
+        "FLASK_ENV": "development"
+      }
+    },
+    {
+      "name": "Frontend: Dev Server",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "preLaunchTask": "npm: dev",
+      "postDebugTask": "npm: stop"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack: Dev",
+      "configurations": ["Python: Flask Backend", "Frontend: Dev Server"]
+    }
+  ]
+}
