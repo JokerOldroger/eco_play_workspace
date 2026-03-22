@@ -1,0 +1,16 @@
+.DS_Store
+*.pyc
+__pycache__/
+
+backend/.env
+backend/src/eco_play.db
+backend/src/__pycache__/
+backend/tests/__pycache__/
+
+frontend/.env
+frontend/.DS_Store
+frontend/EcoPlay Campus Energy App/.env
+frontend/EcoPlay Campus Energy App/dist/
+frontend/EcoPlay Campus Energy App/node_modules/.vite/
+
+venv/

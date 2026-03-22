@@ -16,6 +16,9 @@ def calculate_weighted_comfort(building_votes, sensor_data=None, weights=None):
         'temp_factor': 0.1   # 温度影响因子（可关联传感器）
     }
     w = weights or default_weights
+
+    if building_votes['total'] <= 0:
+        return 0.0
     
     # 基础评分（基于投票）
     base_score = (

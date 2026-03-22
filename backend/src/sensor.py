@@ -19,7 +19,7 @@ SENSOR_PIN_MAP = {
     6: 9    # Shaw Auditorium → GPIO9
 }
 
-def read_sensor_data(building_id):
+def read_sensor_data(building_id, default_temperature=None, default_humidity=None):
     """
     读取指定建筑的传感器数据
     :param building_id: 建筑ID
@@ -33,6 +33,9 @@ def read_sensor_data(building_id):
             return round(temperature, 1), round(humidity, 1)
     
     # 模拟数据（无传感器/读取失败时）
+    if default_temperature is not None and default_humidity is not None:
+        return round(default_temperature, 1), round(default_humidity, 1)
+
     temp = round(random.uniform(18.0, 28.0), 1)
     humi = round(random.uniform(30.0, 70.0), 1)
     return temp, humi

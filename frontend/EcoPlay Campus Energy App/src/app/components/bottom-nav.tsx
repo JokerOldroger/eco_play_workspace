@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router';
-import { ThumbsUp, BarChart3, MessageCircle } from 'lucide-react';
+import { ThumbsUp, BarChart3, MessageCircle, Settings } from 'lucide-react';
 
 export function BottomNav() {
   const location = useLocation();
@@ -8,11 +8,12 @@ export function BottomNav() {
     { path: '/', label: 'Vote', icon: ThumbsUp },
     { path: '/stats', label: 'Stats', icon: BarChart3 },
     { path: '/chat', label: 'Chat', icon: MessageCircle },
+    { path: '/settings', label: 'Settings', icon: Settings },
   ];
 
   return (
     <div className="bg-white border-t border-gray-200 shadow-lg">
-      <div className="grid grid-cols-3">
+      <div className="grid grid-cols-4">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = location.pathname === tab.path;

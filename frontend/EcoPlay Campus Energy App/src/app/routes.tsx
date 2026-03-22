@@ -3,6 +3,7 @@ import { VotePage } from './components/vote-page';
 import { StatsPage } from './components/stats-page';
 import { ChatPage } from './components/chat-page';
 import { BottomNav } from './components/bottom-nav';
+import { SettingsPage } from './components/settings-page';
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -37,6 +38,14 @@ export const router = createBrowserRouter([
     element: (
       <Layout>
         <ChatPage />
+      </Layout>
+    ),
+  },
+  {
+    path: '/settings',
+    element: (
+      <Layout>
+        <SettingsPage />
       </Layout>
     ),
   },
