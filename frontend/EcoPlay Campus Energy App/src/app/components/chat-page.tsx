@@ -323,15 +323,10 @@ export function ChatPage() {
 
   return (
     <div className="flex flex-col h-full bg-white">
-      <div className={`border-b ${isPublicView ? 'bg-gradient-to-b from-green-600 to-green-500 text-white px-4 py-5' : 'bg-green-600 text-white px-4 py-4 sm:px-5 sm:py-5'}`}>
-        <div className={`flex ${isPublicView ? 'flex-col items-stretch gap-3 text-center' : 'flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4'}`}>
+      <div className={`border-b ${isPublicView ? 'bg-gradient-to-b from-green-600 to-green-500 text-white px-4 py-4' : 'bg-green-600 text-white px-4 py-4 sm:px-5 sm:py-5'}`}>
+        <div className={`flex ${isPublicView ? 'flex-col items-stretch gap-2 text-center' : 'flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4'}`}>
           <div>
             <h1 className={`${isPublicView ? 'text-2xl' : 'text-xl sm:text-2xl'} font-bold`}>AI Energy Assistant</h1>
-            {isPublicView ? (
-              <p className="mt-2 text-sm text-green-50">
-                Share comfort issues or questions and we will log them for follow-up.
-              </p>
-            ) : null}
           </div>
           <button
             type="button"
@@ -342,8 +337,8 @@ export function ChatPage() {
             New Chat
           </button>
         </div>
-        <div className={`mt-3 ${isPublicView ? 'space-y-3' : 'grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_220px_220px] items-center'}`}>
-          <p className={`text-sm ${isPublicView ? 'text-green-50 text-center' : 'text-green-50'}`}>{statusMessage}</p>
+        <div className={`mt-3 ${isPublicView ? 'space-y-2' : 'grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_220px_220px] items-center'}`}>
+          {!isPublicView ? <p className="text-sm text-green-50">{statusMessage}</p> : null}
           {isPublicView ? (
             <div className="grid grid-cols-1 gap-2 text-left">
               <label className="block">
@@ -399,7 +394,7 @@ export function ChatPage() {
         </div>
       </div>
 
-      <div className={`flex-1 overflow-y-auto space-y-4 ${isPublicView ? 'bg-slate-50 px-4 py-4' : 'bg-gray-50 px-4 py-4'}`}>
+      <div className={`flex-1 overflow-y-auto space-y-4 ${isPublicView ? 'bg-slate-50 px-4 py-3' : 'bg-gray-50 px-4 py-4'}`}>
         {error ? <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
         {openRequests.length > 0 ? (
@@ -437,7 +432,7 @@ export function ChatPage() {
 
         {messages.length === 0 ? (
           <div className={`rounded-2xl border border-dashed border-gray-300 bg-white px-5 py-4 text-sm text-gray-600 ${isPublicView ? 'shadow-sm' : ''}`}>
-            Ask about room comfort, building conditions, or describe a problem like “Room 301 is too cold every afternoon.”
+            Start a new conversation.
           </div>
         ) : null}
 
