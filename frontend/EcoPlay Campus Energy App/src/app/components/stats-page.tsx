@@ -108,7 +108,7 @@ export function StatsPage() {
               <div className="text-right mt-1 text-sm">{currentBuilding.tooWarmPercent}%</div>
             </div>
 
-            <div className="text-center pt-3 border-t-2 border-gray-200">
+            <div className="text-center pt-4 border-t-2 border-gray-200">
               <div className="text-gray-600 text-base">Total Votes Today</div>
               <div className="text-4xl font-bold text-gray-800 mt-1">{currentBuilding.total}</div>
             </div>
@@ -129,7 +129,7 @@ export function StatsPage() {
                 key={building.id}
                 type="button"
                 onClick={() => setCurrentBuilding(building)}
-                className={`w-full text-left bg-white rounded-lg p-4 shadow-md border-2 ${
+                className={`w-full text-left bg-white rounded-2xl p-5 shadow-md border-2 ${
                   building.id === currentBuilding.id ? 'border-green-500' : 'border-gray-200'
                 }`}
               >

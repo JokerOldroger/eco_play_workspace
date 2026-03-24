@@ -20,7 +20,7 @@ export function BottomNav({ publicOnly = false }: { publicOnly?: boolean }) {
       ];
 
   return (
-    <div className="bg-white border-t border-gray-200 shadow-lg">
+    <div className={`bg-white border-t border-gray-200 shadow-lg ${isPublicRoute ? 'rounded-t-[1.75rem]' : ''}`}>
       <div className={`grid ${isPublicRoute ? 'grid-cols-3' : 'grid-cols-4'}`}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -34,6 +34,14 @@ export function BottomNav({ publicOnly = false }: { publicOnly?: boolean }) {
                 isActive
                   ? 'bg-green-600 text-white'
                   : 'text-gray-600 hover:bg-gray-50'
+              } ${isPublicRoute ? 'min-h-[78px]' : ''} ${
+                isPublicRoute && isActive
+                  ? tab.path === '/user'
+                    ? 'rounded-tl-[1.75rem]'
+                    : tab.path === '/user/chat'
+                    ? 'rounded-tr-[1.75rem]'
+                    : ''
+                  : ''
               }`}
             >
               <Icon className="w-6 h-6 mb-1" />
