@@ -1,16 +1,27 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router';
 import { type StatsBuilding, getStats } from '@/api/ecoApi';
+import { getSavedBuildingId, saveBuildingId } from '@/app/selection-context';
 import { normalizeBuildingValue } from '@/app/url-context';
 
 export function StatsPage() {
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [buildingData, setBuildingData] = useState<StatsBuilding[]>([]);
   const [currentBuilding, setCurrentBuilding] = useState<StatsBuilding | null>(null);
   const [error, setError] = useState('');
   const buildingParam = searchParams.get('building');
   const isPublicView = location.pathname.startsWith('/user');
+
+  function updateBuildingSearchParam(building: StatsBuilding | null) {
+    const nextParams = new URLSearchParams(searchParams);
+    if (building) {
+      nextParams.set('building', building.name);
+    } else {
+      nextParams.delete('building');
+    }
+    setSearchParams(nextParams, { replace: true });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -29,8 +40,14 @@ export function StatsPage() {
               (building) => normalizeBuildingValue(building.name) === normalizeBuildingValue(buildingParam)
             ) ?? null
           : null;
+        const savedBuildingId = getSavedBuildingId(isPublicView);
+        const savedBuilding =
+          savedBuildingId === null
+            ? null
+            : stats.buildingRankings.find((building) => building.id === savedBuildingId) ?? null;
         setCurrentBuilding(
           preferredBuilding ??
+            savedBuilding ??
             (Object.keys(stats.currentBuilding).length > 0
               ? (stats.currentBuilding as StatsBuilding)
               : stats.buildingRankings[0] ?? null)
@@ -46,7 +63,23 @@ export function StatsPage() {
     return () => {
       cancelled = true;
     };
-  }, [buildingParam]);
+  }, [buildingParam, isPublicView]);
+
+  useEffect(() => {
+    saveBuildingId(isPublicView, currentBuilding?.id ?? null);
+  }, [currentBuilding, isPublicView]);
+
+  useEffect(() => {
+    if (!currentBuilding) {
+      return;
+    }
+
+    if (buildingParam === currentBuilding.name) {
+      return;
+    }
+
+    updateBuildingSearchParam(currentBuilding);
+  }, [currentBuilding, buildingParam]);
 
   if (error) {
     return <div className="flex h-full items-center justify-center bg-white text-red-600">{error}</div>;
@@ -57,7 +90,8 @@ export function StatsPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-white">
+    <div className="h-full min-h-0 bg-white">
+      <div className="h-full min-h-0 overflow-y-auto">
       <div className={`min-h-full bg-white grid grid-cols-1 ${isPublicView ? 'xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]' : 'xl:grid-cols-[minmax(360px,460px)_minmax(0,1fr)]'}`}>
         <div className={`flex flex-col border-b border-gray-200 ${isPublicView ? 'xl:border-b-0 xl:border-r' : 'xl:border-b-0 xl:border-r'} border-gray-200`}>
           <div className={`bg-green-600 text-white text-center px-4 py-4 ${isPublicView ? '' : 'sm:py-5'}`}>
@@ -129,7 +163,10 @@ export function StatsPage() {
                 <button
                   key={building.id}
                   type="button"
-                  onClick={() => setCurrentBuilding(building)}
+                  onClick={() => {
+                    setCurrentBuilding(building);
+                    updateBuildingSearchParam(building);
+                  }}
                   className={`w-full text-left bg-white rounded-2xl p-5 shadow-md border-2 ${
                     building.id === currentBuilding.id ? 'border-green-500' : 'border-gray-200'
                   }`}
@@ -179,6 +216,7 @@ export function StatsPage() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { useLocation, useSearchParams } from 'react-router';
 import { Thermometer, Droplets, Wind } from 'lucide-react';
 import HKUSTLogo from '../../imports/Hong_Kong_University_of_Science_and_Technology_symbol.svg';
 import { BUILDINGS_UPDATED_EVENT } from '@/app/building-events';
+import { getSavedBuildingId, saveBuildingId } from '@/app/selection-context';
 import { getBuildingFromParam } from '@/app/url-context';
 import {
   type Building,
@@ -41,7 +42,7 @@ function buildEmptyVotes(buildingId: number): BuildingVotes {
 
 export function VotePage() {
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<number | null>(null);
   const [votes, setVotes] = useState<BuildingVotes>(emptyVotes);
@@ -53,6 +54,16 @@ export function VotePage() {
   const selectedBuilding = buildings.find((building) => building.id === selectedBuildingId) ?? null;
   const buildingParam = searchParams.get('building');
   const isPublicView = location.pathname.startsWith('/user');
+
+  function updateBuildingSearchParam(building: Building | null) {
+    const nextParams = new URLSearchParams(searchParams);
+    if (building) {
+      nextParams.set('building', building.name);
+    } else {
+      nextParams.delete('building');
+    }
+    setSearchParams(nextParams, { replace: true });
+  }
 
   async function loadBuildings(preferredBuildingId?: number | null) {
     try {
@@ -66,10 +77,13 @@ export function VotePage() {
       }
 
       const buildingFromUrl = getBuildingFromParam(buildingList, buildingParam);
+      const savedBuildingId = getSavedBuildingId(isPublicView);
 
       const nextSelectedId =
         buildingFromUrl?.id ??
-        (preferredBuildingId && buildingList.some((building) => building.id === preferredBuildingId)
+        (savedBuildingId && buildingList.some((building) => building.id === savedBuildingId)
+          ? savedBuildingId
+          : preferredBuildingId && buildingList.some((building) => building.id === preferredBuildingId)
           ? preferredBuildingId
           : selectedBuildingId && buildingList.some((building) => building.id === selectedBuildingId)
           ? selectedBuildingId
@@ -93,7 +107,7 @@ export function VotePage() {
     return () => {
       cancelled = true;
     };
-  }, [buildingParam]);
+  }, [buildingParam, isPublicView]);
 
   useEffect(() => {
     function handleBuildingsUpdated() {
@@ -104,7 +118,23 @@ export function VotePage() {
     return () => {
       window.removeEventListener(BUILDINGS_UPDATED_EVENT, handleBuildingsUpdated);
     };
-  }, [selectedBuildingId, buildings, buildingParam]);
+  }, [selectedBuildingId, buildings, buildingParam, isPublicView]);
+
+  useEffect(() => {
+    saveBuildingId(isPublicView, selectedBuildingId);
+  }, [isPublicView, selectedBuildingId]);
+
+  useEffect(() => {
+    if (!selectedBuilding) {
+      return;
+    }
+
+    if (buildingParam === selectedBuilding.name) {
+      return;
+    }
+
+    updateBuildingSearchParam(selectedBuilding);
+  }, [selectedBuilding, buildingParam]);
 
   useEffect(() => {
     if (!selectedBuilding) {
@@ -183,7 +213,8 @@ export function VotePage() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto bg-white">
+    <div className="flex flex-col h-full min-h-0 bg-white">
+      <div className="flex-1 min-h-0 overflow-y-auto">
       <div className={`flex ${isPublicView ? 'flex-col' : 'items-center justify-center'} bg-white border-b border-gray-200 gap-2 px-4 py-4 sm:gap-3 ${isPublicView ? '' : 'sm:py-4'}`}>
         <img src={HKUSTLogo} alt="HKUST Logo" className="h-10 sm:h-12 mx-auto" />
         <div className="text-center text-base leading-tight sm:text-lg text-gray-700">
@@ -202,7 +233,12 @@ export function VotePage() {
           <select
             id="building-select"
             value={selectedBuildingId ?? ''}
-            onChange={(event) => setSelectedBuildingId(Number(event.target.value))}
+            onChange={(event) => {
+              const nextBuildingId = Number(event.target.value);
+              const nextBuilding = buildings.find((building) => building.id === nextBuildingId) ?? null;
+              setSelectedBuildingId(nextBuildingId);
+              updateBuildingSearchParam(nextBuilding);
+            }}
             className={`rounded-md border border-blue-200 bg-white text-gray-800 w-full sm:w-auto ${isPublicView ? 'px-4 py-3 text-base' : 'px-3 py-2 text-sm sm:text-base'}`}
           >
             {buildings.map((building) => (
@@ -286,6 +322,7 @@ export function VotePage() {
             )}
           </p>
         )}
+      </div>
       </div>
     </div>
   );

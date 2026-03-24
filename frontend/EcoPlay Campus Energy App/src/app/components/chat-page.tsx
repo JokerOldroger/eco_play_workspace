@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router';
 import { Send, Bot, Trash2, PlusSquare } from 'lucide-react';
 import { BUILDINGS_UPDATED_EVENT } from '@/app/building-events';
+import { getSavedBuildingId, saveBuildingId } from '@/app/selection-context';
 import { getBuildingFromParam } from '@/app/url-context';
 import {
   type Building,
@@ -19,7 +20,7 @@ const SESSION_STORAGE_KEY = 'ecoplay_chat_session_id';
 
 export function ChatPage() {
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<number | null>(null);
   const [roomLabel, setRoomLabel] = useState('');
@@ -36,6 +37,23 @@ export function ChatPage() {
   const hasPresetBuilding = Boolean(buildingParam);
   const hasPresetRoom = Boolean(roomParam);
   const selectedBuilding = buildings.find((building) => building.id === selectedBuildingId) ?? null;
+
+  function updateSearchParams(nextBuilding: Building | null, nextRoom: string) {
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextBuilding) {
+      nextParams.set('building', nextBuilding.name);
+    } else {
+      nextParams.delete('building');
+    }
+
+    if (nextRoom.trim()) {
+      nextParams.set('room', nextRoom.trim());
+    } else {
+      nextParams.delete('room');
+    }
+
+    setSearchParams(nextParams, { replace: true });
+  }
 
   function resetChatSession(nextBuildingId: number | null) {
     setSessionId('');
@@ -62,10 +80,13 @@ export function ChatPage() {
     }
 
     const buildingFromUrl = getBuildingFromParam(buildingList, buildingParam);
+    const savedBuildingId = getSavedBuildingId(isPublicView);
 
     const nextSelectedId =
       buildingFromUrl?.id ??
-      (preferredBuildingId && buildingList.some((building) => building.id === preferredBuildingId)
+      (savedBuildingId && buildingList.some((building) => building.id === savedBuildingId)
+        ? savedBuildingId
+        : preferredBuildingId && buildingList.some((building) => building.id === preferredBuildingId)
         ? preferredBuildingId
         : selectedBuildingId && buildingList.some((building) => building.id === selectedBuildingId)
         ? selectedBuildingId
@@ -91,8 +112,14 @@ export function ChatPage() {
 
         setBuildings(buildingList);
         const buildingFromUrl = getBuildingFromParam(buildingList, buildingParam);
+        const savedBuildingId = getSavedBuildingId(isPublicView);
         if (buildingList.length > 0) {
-          setSelectedBuildingId(buildingFromUrl?.id ?? buildingList[0].id);
+          setSelectedBuildingId(
+            buildingFromUrl?.id ??
+              (savedBuildingId && buildingList.some((building) => building.id === savedBuildingId)
+                ? savedBuildingId
+                : buildingList[0].id)
+          );
         }
         if (roomParam) {
           setRoomLabel(roomParam);
@@ -129,7 +156,7 @@ export function ChatPage() {
     return () => {
       cancelled = true;
     };
-  }, [buildingParam, roomParam]);
+  }, [buildingParam, roomParam, isPublicView]);
 
   useEffect(() => {
     async function handleBuildingsUpdated() {
@@ -144,7 +171,23 @@ export function ChatPage() {
     return () => {
       window.removeEventListener(BUILDINGS_UPDATED_EVENT, handleBuildingsUpdated);
     };
-  }, [selectedBuildingId, buildings, sessionId, messages, buildingParam]);
+  }, [selectedBuildingId, buildings, sessionId, messages, buildingParam, isPublicView]);
+
+  useEffect(() => {
+    saveBuildingId(isPublicView, selectedBuildingId);
+  }, [isPublicView, selectedBuildingId]);
+
+  useEffect(() => {
+    if (!selectedBuilding) {
+      return;
+    }
+
+    if (buildingParam === selectedBuilding.name && roomParam === (roomLabel.trim() || null)) {
+      return;
+    }
+
+    updateSearchParams(selectedBuilding, roomLabel);
+  }, [selectedBuilding, roomLabel, buildingParam, roomParam]);
 
   async function ensureSessionId() {
     if (sessionId) {
@@ -223,8 +266,10 @@ export function ChatPage() {
   }
 
   function handleBuildingChange(nextBuildingId: number) {
+    const nextBuilding = buildings.find((building) => building.id === nextBuildingId) ?? null;
     if (!sessionId && messages.length === 0) {
       setSelectedBuildingId(nextBuildingId);
+      updateSearchParams(nextBuilding, roomLabel);
       return;
     }
 
@@ -237,6 +282,7 @@ export function ChatPage() {
     }
 
     resetChatSession(nextBuildingId);
+    updateSearchParams(nextBuilding, roomLabel);
   }
 
   async function handleDeleteMessage(messageId: number) {
@@ -316,7 +362,11 @@ export function ChatPage() {
               </label>
               <input
                 value={roomLabel}
-                onChange={(event) => setRoomLabel(event.target.value)}
+                onChange={(event) => {
+                  const nextRoom = event.target.value;
+                  setRoomLabel(nextRoom);
+                  updateSearchParams(selectedBuilding, nextRoom);
+                }}
                 placeholder="Room / Area"
                 className="w-full rounded-2xl px-4 py-3 text-sm text-gray-900"
               />
@@ -336,7 +386,11 @@ export function ChatPage() {
               </select>
               <input
                 value={roomLabel}
-                onChange={(event) => setRoomLabel(event.target.value)}
+                onChange={(event) => {
+                  const nextRoom = event.target.value;
+                  setRoomLabel(nextRoom);
+                  updateSearchParams(selectedBuilding, nextRoom);
+                }}
                 placeholder="Room / Area"
                 className="w-full rounded-lg px-3 py-2 text-sm text-gray-900"
               />
