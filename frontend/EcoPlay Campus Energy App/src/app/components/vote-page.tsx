@@ -49,6 +49,7 @@ export function VotePage() {
   const [sensor, setSensor] = useState<SensorReading>(fallbackSensor);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingVoteType, setSubmittingVoteType] = useState<'too_cold' | 'comfort' | 'too_warm' | null>(null);
   const [error, setError] = useState('');
 
   const selectedBuilding = buildings.find((building) => building.id === selectedBuildingId) ?? null;
@@ -143,12 +144,14 @@ export function VotePage() {
 
     let cancelled = false;
 
-    async function loadBuildingData() {
+    async function loadBuildingData(showLoading = false) {
       try {
-        setIsLoading(true);
+        if (showLoading) {
+          setIsLoading(true);
+          setVotes(buildEmptyVotes(selectedBuilding.id));
+          setSensor({ ...fallbackSensor, building_id: selectedBuilding.id });
+        }
         setError('');
-        setVotes(buildEmptyVotes(selectedBuilding.id));
-        setSensor({ ...fallbackSensor, building_id: selectedBuilding.id });
         const [voteData, sensorData] = await Promise.all([
           getVotes(selectedBuilding.name),
           getSensorData(selectedBuilding.id),
@@ -161,20 +164,27 @@ export function VotePage() {
         setSensor(sensorData);
       } catch (loadError) {
         if (!cancelled) {
-          setVotes(buildEmptyVotes(selectedBuilding.id));
-          setSensor({ ...fallbackSensor, building_id: selectedBuilding.id });
+          if (showLoading) {
+            setVotes(buildEmptyVotes(selectedBuilding.id));
+            setSensor({ ...fallbackSensor, building_id: selectedBuilding.id });
+          }
           setError(loadError instanceof Error ? loadError.message : 'Failed to load building data');
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && showLoading) {
           setIsLoading(false);
         }
       }
     }
 
-    loadBuildingData();
+    loadBuildingData(true);
+    const intervalId = window.setInterval(() => {
+      loadBuildingData(false);
+    }, 10000);
+
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, [selectedBuilding]);
 
@@ -195,6 +205,7 @@ export function VotePage() {
     const previousVotes = votes;
     setVotes(nextVotes);
     setIsSubmitting(true);
+    setSubmittingVoteType(type);
     setError('');
 
     try {
@@ -209,8 +220,13 @@ export function VotePage() {
       setError(submitError instanceof Error ? submitError.message : 'Failed to submit vote');
     } finally {
       setIsSubmitting(false);
+      setSubmittingVoteType(null);
     }
   };
+
+  const publicVoteCardClass = 'px-4 py-4 min-h-[112px]';
+  const publicVoteLabelClass = 'text-xl';
+  const publicVoteIconClass = 'text-3xl';
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white">
@@ -275,30 +291,30 @@ export function VotePage() {
         <button
           onClick={() => handleVote('too_cold')}
           disabled={!selectedBuilding || isSubmitting}
-          className={`flex flex-col items-center justify-center gap-3 bg-blue-400 hover:bg-blue-500 disabled:opacity-60 text-white rounded-2xl transition-colors ${isPublicView ? 'px-6 py-7 min-h-[160px]' : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
+          className={`flex flex-col items-center justify-center ${isPublicView ? 'gap-2' : 'gap-3'} bg-blue-400 hover:bg-blue-500 text-white rounded-2xl transition-colors ${submittingVoteType === 'too_cold' ? 'ring-4 ring-blue-200/70 scale-[0.99]' : ''} ${isPublicView ? publicVoteCardClass : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
         >
-          <div className={`${isPublicView ? 'text-4xl' : 'text-4xl lg:text-5xl'}`}>❄️</div>
-          <div className={`${isPublicView ? 'text-2xl' : 'text-2xl lg:text-3xl'} font-bold`}>Too Cold</div>
+          <div className={`${isPublicView ? publicVoteIconClass : 'text-4xl lg:text-5xl'}`}>❄️</div>
+          <div className={`${isPublicView ? publicVoteLabelClass : 'text-2xl lg:text-3xl'} font-bold`}>Too Cold</div>
           <div className="text-sm">{isPublicView ? '' : `${votes.too_cold_percent}%`}</div>
         </button>
 
         <button
           onClick={() => handleVote('comfort')}
           disabled={!selectedBuilding || isSubmitting}
-          className={`flex flex-col items-center justify-center gap-3 bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white rounded-2xl transition-colors ${isPublicView ? 'px-6 py-7 min-h-[160px]' : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
+          className={`flex flex-col items-center justify-center ${isPublicView ? 'gap-2' : 'gap-3'} bg-green-500 hover:bg-green-600 text-white rounded-2xl transition-colors ${submittingVoteType === 'comfort' ? 'ring-4 ring-green-200/70 scale-[0.99]' : ''} ${isPublicView ? publicVoteCardClass : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
         >
-          <div className={`${isPublicView ? 'text-4xl' : 'text-4xl lg:text-5xl'}`}>☀️</div>
-          <div className={`${isPublicView ? 'text-2xl' : 'text-2xl lg:text-3xl'} font-bold`}>Comfort</div>
+          <div className={`${isPublicView ? publicVoteIconClass : 'text-4xl lg:text-5xl'}`}>☀️</div>
+          <div className={`${isPublicView ? publicVoteLabelClass : 'text-2xl lg:text-3xl'} font-bold`}>Comfort</div>
           <div className="text-sm">{isPublicView ? '' : `${votes.comfort_percent}%`}</div>
         </button>
 
         <button
           onClick={() => handleVote('too_warm')}
           disabled={!selectedBuilding || isSubmitting}
-          className={`flex flex-col items-center justify-center gap-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-2xl transition-colors ${isPublicView ? 'px-6 py-7 min-h-[160px]' : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
+          className={`flex flex-col items-center justify-center ${isPublicView ? 'gap-2' : 'gap-3'} bg-orange-500 hover:bg-orange-600 text-white rounded-2xl transition-colors ${submittingVoteType === 'too_warm' ? 'ring-4 ring-orange-200/70 scale-[0.99]' : ''} ${isPublicView ? publicVoteCardClass : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
         >
-          <div className={`${isPublicView ? 'text-4xl' : 'text-4xl lg:text-5xl'}`}>🔥</div>
-          <div className={`${isPublicView ? 'text-2xl' : 'text-2xl lg:text-3xl'} font-bold`}>Too Warm</div>
+          <div className={`${isPublicView ? publicVoteIconClass : 'text-4xl lg:text-5xl'}`}>🔥</div>
+          <div className={`${isPublicView ? publicVoteLabelClass : 'text-2xl lg:text-3xl'} font-bold`}>Too Warm</div>
           <div className="text-sm">{isPublicView ? '' : `${votes.too_warm_percent}%`}</div>
         </button>
       </div>

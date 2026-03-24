@@ -60,8 +60,13 @@ export function StatsPage() {
     }
 
     loadStats();
+    const intervalId = window.setInterval(() => {
+      loadStats();
+    }, 10000);
+
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, [buildingParam, isPublicView]);
 
