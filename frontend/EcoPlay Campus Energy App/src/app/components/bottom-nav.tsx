@@ -20,7 +20,7 @@ export function BottomNav({ publicOnly = false }: { publicOnly?: boolean }) {
       ];
 
   return (
-    <div className={`bg-white border-t border-gray-200 shadow-lg ${isPublicRoute ? 'rounded-t-[1.75rem]' : ''}`}>
+    <div className={`bg-white border-t border-gray-200 shadow-lg shrink-0 ${isPublicRoute ? 'rounded-t-[1.75rem]' : ''}`}>
       <div className={`grid ${isPublicRoute ? 'grid-cols-3' : 'grid-cols-4'}`}>
         {tabs.map((tab) => {
           const Icon = tab.icon;

@@ -35,6 +35,7 @@ export function ChatPage() {
   const isPublicView = location.pathname.startsWith('/user');
   const hasPresetBuilding = Boolean(buildingParam);
   const hasPresetRoom = Boolean(roomParam);
+  const selectedBuilding = buildings.find((building) => building.id === selectedBuildingId) ?? null;
 
   function resetChatSession(nextBuildingId: number | null) {
     setSessionId('');

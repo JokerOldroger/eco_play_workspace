@@ -7,7 +7,7 @@ import { SettingsPage } from './components/settings-page';
 
 function OperatorLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="w-full max-w-7xl min-h-screen mx-auto bg-white flex flex-col shadow-none md:shadow-2xl">
+    <div className="w-full max-w-7xl h-[100dvh] mx-auto bg-white flex flex-col shadow-none md:shadow-2xl">
       <div className="flex-1 overflow-hidden min-h-0">
         {children}
       </div>
@@ -18,8 +18,8 @@ function OperatorLayout({ children }: { children: React.ReactNode }) {
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-100 px-0 py-0 sm:px-4 sm:py-5">
-      <div className="w-full max-w-md min-h-screen sm:min-h-[calc(100vh-2.5rem)] mx-auto bg-white flex flex-col overflow-hidden shadow-none sm:rounded-[2rem] sm:shadow-xl">
+    <div className="h-[100dvh] bg-slate-100 px-0 py-0 sm:px-4 sm:py-5">
+      <div className="w-full max-w-md h-[100dvh] sm:h-[calc(100dvh-2.5rem)] mx-auto bg-white flex flex-col overflow-hidden shadow-none sm:rounded-[2rem] sm:shadow-xl">
         <div className="flex-1 overflow-hidden min-h-0">{children}</div>
         <BottomNav publicOnly />
       </div>
