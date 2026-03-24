@@ -184,18 +184,18 @@ export function VotePage() {
 
   return (
     <div className="flex flex-col h-full bg-white">
-      <div className={`flex items-center justify-center bg-white border-b border-gray-200 ${isPublicView ? 'gap-2 px-4 py-3' : 'gap-3 py-3'}`}>
-        <img src={HKUSTLogo} alt="HKUST Logo" className={isPublicView ? 'h-10' : 'h-12'} />
-        <div className={`${isPublicView ? 'text-base leading-tight' : 'text-lg'} text-gray-700`}>
+      <div className={`flex items-center justify-center bg-white border-b border-gray-200 gap-2 px-4 py-3 sm:gap-3 ${isPublicView ? '' : 'sm:py-4'}`}>
+        <img src={HKUSTLogo} alt="HKUST Logo" className="h-10 sm:h-12" />
+        <div className="text-base leading-tight sm:text-lg text-gray-700">
           Student Sustainable Smart Campus Living Lab
         </div>
       </div>
 
-      <div className={`bg-blue-100 text-center ${isPublicView ? 'px-4 py-4' : 'px-6 py-3'}`}>
-        <h1 className={`${isPublicView ? 'text-3xl leading-tight font-semibold' : 'text-xl'} text-gray-800`}>
+      <div className={`bg-blue-100 text-center px-4 py-4 sm:px-6 ${isPublicView ? '' : 'sm:py-5'}`}>
+        <h1 className={`${isPublicView ? 'text-3xl' : 'text-2xl sm:text-3xl'} leading-tight font-semibold text-gray-800`}>
           HKUST EcoPlay - Student Environmental Feedback
         </h1>
-        <div className={`mt-3 ${isPublicView ? 'space-y-2' : 'flex items-center justify-center gap-3'}`}>
+        <div className="mt-3 space-y-2 sm:flex sm:items-center sm:justify-center sm:gap-3 sm:space-y-0">
           <label htmlFor="building-select" className="text-sm text-gray-700">
             Building
           </label>
@@ -203,7 +203,7 @@ export function VotePage() {
             id="building-select"
             value={selectedBuildingId ?? ''}
             onChange={(event) => setSelectedBuildingId(Number(event.target.value))}
-            className={`rounded-md border border-blue-200 bg-white text-gray-800 ${isPublicView ? 'w-full px-4 py-3 text-base' : 'px-3 py-2 text-sm'}`}
+            className={`rounded-md border border-blue-200 bg-white text-gray-800 w-full sm:w-auto ${isPublicView ? 'px-4 py-3 text-base' : 'px-3 py-2 text-sm sm:text-base'}`}
           >
             {buildings.map((building) => (
               <option key={building.id} value={building.id}>
@@ -214,64 +214,64 @@ export function VotePage() {
         </div>
       </div>
 
-      <div className={`bg-gray-50 ${isPublicView ? 'grid grid-cols-1 gap-3 px-4 py-4' : 'grid grid-cols-3 gap-4 px-8 py-5'}`}>
-        <div className={`flex items-center justify-center gap-2 bg-white rounded-lg border border-gray-200 ${isPublicView ? 'py-4' : 'py-3'}`}>
-          <Thermometer className={`${isPublicView ? 'w-7 h-7' : 'w-8 h-8'} text-blue-500`} />
-          <span className={`${isPublicView ? 'text-2xl' : 'text-3xl'} text-gray-800`}>
+      <div className={`bg-gray-50 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 px-4 sm:px-6 lg:px-8 py-4 sm:py-5`}>
+        <div className="flex items-center justify-center gap-2 bg-white rounded-lg border border-gray-200 py-4 sm:py-3">
+          <Thermometer className="w-7 h-7 sm:w-8 sm:h-8 text-blue-500" />
+          <span className="text-2xl sm:text-3xl text-gray-800">
             {isLoading ? '--' : `${sensor.temperature.toFixed(1)}°C`}
           </span>
         </div>
-        <div className={`flex items-center justify-center gap-2 bg-white rounded-lg border border-gray-200 ${isPublicView ? 'py-4' : 'py-3'}`}>
-          <Droplets className={`${isPublicView ? 'w-7 h-7' : 'w-8 h-8'} text-blue-500`} />
-          <span className={`${isPublicView ? 'text-2xl' : 'text-3xl'} text-gray-800`}>
+        <div className="flex items-center justify-center gap-2 bg-white rounded-lg border border-gray-200 py-4 sm:py-3">
+          <Droplets className="w-7 h-7 sm:w-8 sm:h-8 text-blue-500" />
+          <span className="text-2xl sm:text-3xl text-gray-800">
             {isLoading ? '--' : `${sensor.humidity.toFixed(1)}%`}
           </span>
         </div>
-        <div className={`flex items-center justify-center gap-2 bg-white rounded-lg border border-gray-200 ${isPublicView ? 'py-4' : 'py-3'}`}>
-          <Wind className={`${isPublicView ? 'w-7 h-7' : 'w-8 h-8'} text-green-600`} />
-          <span className={`${isPublicView ? 'text-xl' : 'text-2xl'} text-gray-800`}>
+        <div className="flex items-center justify-center gap-2 bg-white rounded-lg border border-gray-200 py-4 sm:py-3">
+          <Wind className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" />
+          <span className="text-xl sm:text-2xl text-gray-800">
             {selectedBuilding ? `ID ${selectedBuilding.id}` : '--'}
           </span>
         </div>
       </div>
 
-      <div className={`flex-1 min-h-0 ${isPublicView ? 'grid grid-cols-1 gap-4 px-4 py-4 content-start' : 'flex items-center justify-center gap-6 px-8 py-1'}`}>
+      <div className={`flex-1 min-h-0 grid grid-cols-1 ${isPublicView ? '' : 'md:grid-cols-3'} gap-4 sm:gap-5 lg:gap-6 px-4 sm:px-6 lg:px-8 py-4 content-start ${isPublicView ? '' : 'md:items-stretch'}`}>
         <button
           onClick={() => handleVote('too_cold')}
           disabled={!selectedBuilding || isSubmitting}
-          className={`flex flex-col items-center justify-center gap-3 bg-blue-400 hover:bg-blue-500 disabled:opacity-60 text-white rounded-2xl transition-colors ${isPublicView ? 'px-6 py-7 min-h-[160px]' : 'p-6 h-40 flex-1'}`}
+          className={`flex flex-col items-center justify-center gap-3 bg-blue-400 hover:bg-blue-500 disabled:opacity-60 text-white rounded-2xl transition-colors ${isPublicView ? 'px-6 py-7 min-h-[160px]' : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
         >
-          <div className={isPublicView ? 'text-4xl' : 'text-5xl'}>❄️</div>
-          <div className={`${isPublicView ? 'text-2xl' : 'text-3xl'} font-bold`}>Too Cold</div>
+          <div className={`${isPublicView ? 'text-4xl' : 'text-4xl lg:text-5xl'}`}>❄️</div>
+          <div className={`${isPublicView ? 'text-2xl' : 'text-2xl lg:text-3xl'} font-bold`}>Too Cold</div>
           <div className="text-sm">{votes.too_cold_percent}%</div>
         </button>
 
         <button
           onClick={() => handleVote('comfort')}
           disabled={!selectedBuilding || isSubmitting}
-          className={`flex flex-col items-center justify-center gap-3 bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white rounded-2xl transition-colors ${isPublicView ? 'px-6 py-7 min-h-[160px]' : 'p-6 h-40 flex-1'}`}
+          className={`flex flex-col items-center justify-center gap-3 bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white rounded-2xl transition-colors ${isPublicView ? 'px-6 py-7 min-h-[160px]' : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
         >
-          <div className={isPublicView ? 'text-4xl' : 'text-5xl'}>☀️</div>
-          <div className={`${isPublicView ? 'text-2xl' : 'text-3xl'} font-bold`}>Comfort</div>
+          <div className={`${isPublicView ? 'text-4xl' : 'text-4xl lg:text-5xl'}`}>☀️</div>
+          <div className={`${isPublicView ? 'text-2xl' : 'text-2xl lg:text-3xl'} font-bold`}>Comfort</div>
           <div className="text-sm">{votes.comfort_percent}%</div>
         </button>
 
         <button
           onClick={() => handleVote('too_warm')}
           disabled={!selectedBuilding || isSubmitting}
-          className={`flex flex-col items-center justify-center gap-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-2xl transition-colors ${isPublicView ? 'px-6 py-7 min-h-[160px]' : 'p-6 h-40 flex-1'}`}
+          className={`flex flex-col items-center justify-center gap-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-2xl transition-colors ${isPublicView ? 'px-6 py-7 min-h-[160px]' : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
         >
-          <div className={isPublicView ? 'text-4xl' : 'text-5xl'}>🔥</div>
-          <div className={`${isPublicView ? 'text-2xl' : 'text-3xl'} font-bold`}>Too Warm</div>
+          <div className={`${isPublicView ? 'text-4xl' : 'text-4xl lg:text-5xl'}`}>🔥</div>
+          <div className={`${isPublicView ? 'text-2xl' : 'text-2xl lg:text-3xl'} font-bold`}>Too Warm</div>
           <div className="text-sm">{votes.too_warm_percent}%</div>
         </button>
       </div>
 
-      <div className={`text-center bg-white border-t border-gray-200 ${isPublicView ? 'px-4 py-4' : 'py-3 px-4'}`}>
+      <div className={`text-center bg-white border-t border-gray-200 px-4 py-4 ${isPublicView ? '' : 'sm:px-6'}`}>
         {error ? (
           <p className="text-sm text-red-600">{error}</p>
         ) : (
-          <p className={`${isPublicView ? 'text-sm leading-6' : 'text-base leading-tight'} text-gray-700`}>
+          <p className={`${isPublicView ? 'text-sm leading-6' : 'text-sm sm:text-base leading-6 sm:leading-tight'} text-gray-700`}>
             Votes Today:
             <span className="text-blue-600 font-semibold"> Too Cold: {votes.too_cold}</span>
             {' | '}

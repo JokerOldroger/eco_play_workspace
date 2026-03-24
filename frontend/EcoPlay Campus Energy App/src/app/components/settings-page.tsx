@@ -204,7 +204,7 @@ export function SettingsPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-gray-50">
-      <div className="px-6 py-5 space-y-5">
+      <div className="px-4 py-4 sm:px-6 sm:py-5 space-y-5">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
           <p className="text-sm text-gray-600 mt-1">Add buildings, set default data, and tune weighted comfort parameters.</p>
@@ -213,7 +213,7 @@ export function SettingsPage() {
         {message ? <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">{message}</div> : null}
         {error ? <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
           <form onSubmit={handleCreateBuilding} className="rounded-2xl bg-white p-5 shadow-sm border border-gray-200 space-y-3">
             <h2 className="text-lg font-semibold text-gray-900">Add Building</h2>
             <input
@@ -228,16 +228,16 @@ export function SettingsPage() {
               placeholder="Description"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <NumberInput label="Too Cold" value={newBuildingForm.default_too_cold} onChange={(value) => setNewBuildingForm((current) => ({ ...current, default_too_cold: value }))} />
               <NumberInput label="Comfort" value={newBuildingForm.default_comfort} onChange={(value) => setNewBuildingForm((current) => ({ ...current, default_comfort: value }))} />
               <NumberInput label="Too Warm" value={newBuildingForm.default_too_warm} onChange={(value) => setNewBuildingForm((current) => ({ ...current, default_too_warm: value }))} />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <DecimalInput label="Temp" value={newBuildingForm.default_temperature} onChange={(value) => setNewBuildingForm((current) => ({ ...current, default_temperature: value }))} />
               <DecimalInput label="Humidity" value={newBuildingForm.default_humidity} onChange={(value) => setNewBuildingForm((current) => ({ ...current, default_humidity: value }))} />
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <DecimalInput label="CO2 (ppm)" value={newBuildingForm.default_co2} onChange={(value) => setNewBuildingForm((current) => ({ ...current, default_co2: value }))} />
               <DecimalInput label="Noise (dB)" value={newBuildingForm.default_noise} onChange={(value) => setNewBuildingForm((current) => ({ ...current, default_noise: value }))} />
               <DecimalInput label="Light (lux)" value={newBuildingForm.default_light} onChange={(value) => setNewBuildingForm((current) => ({ ...current, default_light: value }))} />
@@ -249,7 +249,7 @@ export function SettingsPage() {
 
           <form onSubmit={handleUpdateWeights} className="rounded-2xl bg-white p-5 shadow-sm border border-gray-200 space-y-3">
             <h2 className="text-lg font-semibold text-gray-900">Algorithm Weights</h2>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <DecimalInput label="Too Cold Weight" value={weights.too_cold} onChange={(value) => setWeights((current) => ({ ...current, too_cold: value }))} />
               <DecimalInput label="Comfort Weight" value={weights.comfort} onChange={(value) => setWeights((current) => ({ ...current, comfort: value }))} />
               <DecimalInput label="Too Warm Weight" value={weights.too_warm} onChange={(value) => setWeights((current) => ({ ...current, too_warm: value }))} />
@@ -261,9 +261,9 @@ export function SettingsPage() {
           </form>
         </div>
 
-        <div className="grid grid-cols-[280px_1fr] gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5">
           <div className="rounded-2xl bg-white p-4 shadow-sm border border-gray-200 space-y-3 self-start">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Buildings</h2>
               <span className="text-xs text-gray-500">{buildings.length} total</span>
             </div>
@@ -306,14 +306,14 @@ export function SettingsPage() {
           </div>
 
           <form onSubmit={handleUpdateBuilding} className="rounded-2xl bg-white p-5 shadow-sm border border-gray-200 space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Building Defaults</h2>
               {selectedBuilding ? <span className="text-sm text-gray-500">Editing: {selectedBuilding.name}</span> : null}
             </div>
 
             {selectedBuilding ? (
               <>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <input
                     value={buildingForm.name}
                     onChange={(event) => setBuildingForm((current) => ({ ...current, name: event.target.value }))}
@@ -327,16 +327,16 @@ export function SettingsPage() {
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <NumberInput label="Too Cold" value={buildingForm.default_too_cold} onChange={(value) => setBuildingForm((current) => ({ ...current, default_too_cold: value }))} />
                   <NumberInput label="Comfort" value={buildingForm.default_comfort} onChange={(value) => setBuildingForm((current) => ({ ...current, default_comfort: value }))} />
                   <NumberInput label="Too Warm" value={buildingForm.default_too_warm} onChange={(value) => setBuildingForm((current) => ({ ...current, default_too_warm: value }))} />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <DecimalInput label="Default Temp" value={buildingForm.default_temperature} onChange={(value) => setBuildingForm((current) => ({ ...current, default_temperature: value }))} />
                   <DecimalInput label="Default Humidity" value={buildingForm.default_humidity} onChange={(value) => setBuildingForm((current) => ({ ...current, default_humidity: value }))} />
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <DecimalInput label="Default CO2 (ppm)" value={buildingForm.default_co2} onChange={(value) => setBuildingForm((current) => ({ ...current, default_co2: value }))} />
                   <DecimalInput label="Default Noise (dB)" value={buildingForm.default_noise} onChange={(value) => setBuildingForm((current) => ({ ...current, default_noise: value }))} />
                   <DecimalInput label="Default Light (lux)" value={buildingForm.default_light} onChange={(value) => setBuildingForm((current) => ({ ...current, default_light: value }))} />

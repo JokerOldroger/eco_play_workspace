@@ -269,24 +269,24 @@ export function ChatPage() {
 
   return (
     <div className="flex flex-col h-full bg-white">
-      <div className={`bg-green-600 text-white border-b ${isPublicView ? 'px-4 py-4' : 'py-4 px-5'}`}>
-        <div className={`flex ${isPublicView ? 'flex-col items-stretch gap-3' : 'items-center justify-between gap-4'}`}>
-          <h1 className={`${isPublicView ? 'text-xl' : 'text-2xl'} font-bold`}>AI Energy Assistant</h1>
+      <div className={`bg-green-600 text-white border-b px-4 py-4 sm:px-5 ${isPublicView ? '' : 'sm:py-5'}`}>
+        <div className={`flex ${isPublicView ? 'flex-col items-stretch gap-3' : 'flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4'}`}>
+          <h1 className={`${isPublicView ? 'text-xl' : 'text-xl sm:text-2xl'} font-bold`}>AI Energy Assistant</h1>
           <button
             type="button"
             onClick={handleNewChat}
-            className={`inline-flex items-center justify-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/20 ${isPublicView ? 'w-full' : ''}`}
+            className={`inline-flex items-center justify-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/20 ${isPublicView ? 'w-full' : 'w-full lg:w-auto'}`}
           >
             <PlusSquare className="h-4 w-4" />
             New Chat
           </button>
         </div>
-        <div className={`mt-3 ${isPublicView ? 'space-y-3' : 'grid grid-cols-[1fr_180px_180px] gap-3 items-center'}`}>
+        <div className={`mt-3 ${isPublicView ? 'space-y-3' : 'grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_220px_220px] items-center'}`}>
           <p className="text-sm text-green-50">{statusMessage}</p>
           <select
             value={selectedBuildingId ?? ''}
             onChange={(event) => handleBuildingChange(Number(event.target.value))}
-            className={`rounded-lg text-sm text-gray-900 ${isPublicView ? 'w-full px-3 py-3' : 'px-3 py-2'}`}
+            className={`rounded-lg text-sm text-gray-900 ${isPublicView ? 'w-full px-3 py-3' : 'w-full px-3 py-2'}`}
           >
             {buildings.map((building) => (
               <option key={building.id} value={building.id}>
@@ -298,7 +298,7 @@ export function ChatPage() {
             value={roomLabel}
             onChange={(event) => setRoomLabel(event.target.value)}
             placeholder="Room / Area"
-            className={`rounded-lg text-sm text-gray-900 ${isPublicView ? 'w-full px-3 py-3' : 'px-3 py-2'}`}
+            className={`rounded-lg text-sm text-gray-900 ${isPublicView ? 'w-full px-3 py-3' : 'w-full px-3 py-2'}`}
           />
         </div>
       </div>
@@ -315,7 +315,7 @@ export function ChatPage() {
             <div className="mt-3 space-y-2">
               {openRequests.map((request) => (
                 <div key={request.id} className="rounded-xl bg-white border border-amber-100 px-3 py-3">
-                  <div className={`flex items-start gap-3 ${isPublicView ? 'flex-col' : 'justify-between'}`}>
+                  <div className={`flex items-start gap-3 ${isPublicView ? 'flex-col' : 'flex-col xl:flex-row xl:justify-between'}`}>
                     <div>
                       <div className="text-sm font-semibold text-gray-900">
                         #{request.id} · {request.request_type.replaceAll('_', ' ')}
