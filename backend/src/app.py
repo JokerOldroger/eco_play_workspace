@@ -3,12 +3,15 @@ from flask_cors import CORS
 import sqlite3
 import csv
 import io
+import json
 import os
 import secrets
 import db
 import sensor
 import algorithms
 import chat_service
+import comfort_notifications
+import lark_commands
 from datetime import date, datetime, timedelta
 from functools import wraps
 
@@ -106,6 +109,15 @@ def parse_non_negative_float(data, field_name):
     if not isinstance(value, (int, float)) or value < 0:
         raise ValueError(f'{field_name} must be a non-negative number')
     return float(value)
+
+
+def parse_optional_float(data, field_name):
+    value = data.get(field_name)
+    if value is None:
+        return None
+    if not isinstance(value, (int, float)):
+        return None
+    return round(float(value), 1)
 
 
 def build_comfort_analysis_response():
@@ -268,7 +280,8 @@ def update_building_votes(building_id):
     required_fields = ['too_cold', 'comfort', 'too_warm', 'total']
     if not data or not all(f in data for f in required_fields):
         return jsonify({'error': 'Missing vote data'}), 400
-    if not db.get_building_by_id(building_id):
+    building = db.get_building_by_id(building_id)
+    if not building:
         return jsonify({'error': 'Building not found'}), 404
 
     too_cold = data['too_cold']
@@ -279,6 +292,14 @@ def update_building_votes(building_id):
         return jsonify({'error': 'Vote values must be non-negative integers'}), 400
     if total != too_cold + comfort + too_warm:
         return jsonify({'error': 'Total must equal too_cold + comfort + too_warm'}), 400
+
+    target_date = data.get('vote_date', date.today())
+    sensor_snapshot = read_vote_press_sensor_snapshot(building_id)
+    sensor_temperature = parse_optional_float(sensor_snapshot, 'temperature')
+    sensor_humidity = parse_optional_float(sensor_snapshot, 'humidity')
+    sensor_co2 = parse_optional_float(sensor_snapshot, 'co2')
+    sensor_read_time = str(sensor_snapshot.get('read_time', '') or '')
+    previous_votes = db.ensure_votes_for_date(building_id, target_date)
     
     db.update_votes(
         building_id,
@@ -286,9 +307,147 @@ def update_building_votes(building_id):
         comfort,
         too_warm,
         total,
-        data.get('vote_date', date.today())
+        target_date
     )
-    return jsonify({'message': 'Votes updated successfully', 'building_id': building_id})
+
+    logged_events = []
+    event_deltas = {
+        'too_cold': too_cold - previous_votes.get('too_cold', 0),
+        'comfort': comfort - previous_votes.get('comfort', 0),
+        'too_warm': too_warm - previous_votes.get('too_warm', 0),
+    }
+    for vote_type, delta_count in event_deltas.items():
+        if delta_count <= 0:
+            continue
+        event = {
+            'building_id': building_id,
+            'vote_type': vote_type,
+            'delta_count': delta_count,
+            'total_after': total,
+            'too_cold_after': too_cold,
+            'comfort_after': comfort,
+            'too_warm_after': too_warm,
+            'sensor_temperature': sensor_temperature,
+            'sensor_humidity': sensor_humidity,
+            'sensor_co2': sensor_co2,
+            'sensor_read_time': sensor_read_time,
+        }
+        event_id = db.add_comfort_event(**event)
+        event['id'] = event_id
+        notification_result = comfort_notifications.send_comfort_event_alert(event, building)
+        db.update_comfort_event_notification(
+            event_id,
+            notification_result['status'],
+            notification_result.get('error', ''),
+        )
+        logged_events.append({
+            **event,
+            'notification_status': notification_result['status'],
+            'notification_error': notification_result.get('error', ''),
+        })
+
+    return jsonify({
+        'message': 'Votes updated successfully',
+        'building_id': building_id,
+        'comfort_events': logged_events,
+    })
+
+
+def read_vote_press_sensor_snapshot(building_id):
+    building_settings = db.get_building_settings(building_id) or {}
+    try:
+        temp, humi, sensor_status = sensor.read_sensor_snapshot(
+            building_id,
+            default_temperature=building_settings.get('default_temperature'),
+            default_humidity=building_settings.get('default_humidity'),
+            default_co2=building_settings.get('default_co2'),
+        )
+        co2 = round(float(sensor_status.get('co2', building_settings.get('default_co2', 650.0))), 1)
+        return {
+            'temperature': temp,
+            'humidity': humi,
+            'co2': co2,
+            'read_time': sensor_status.get('checked_at') or datetime.utcnow().isoformat() + 'Z',
+        }
+    except Exception as exc:
+        print(f'Vote press sensor read failed: {exc}')
+        request_sensor = request.get_json(silent=True) or {}
+        sensor_snapshot = request_sensor.get('sensor') if isinstance(request_sensor.get('sensor'), dict) else {}
+        return {
+            'temperature': sensor_snapshot.get('temperature', building_settings.get('default_temperature')),
+            'humidity': sensor_snapshot.get('humidity', building_settings.get('default_humidity')),
+            'co2': sensor_snapshot.get('co2', building_settings.get('default_co2')),
+            'read_time': sensor_snapshot.get('read_time') or datetime.utcnow().isoformat() + 'Z',
+        }
+
+
+def log_lark_event(payload, result=None, status_code=200, error=''):
+    try:
+        log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        header = payload.get('header') if isinstance(payload.get('header'), dict) else {}
+        event = payload.get('event') if isinstance(payload.get('event'), dict) else {}
+        message = event.get('message') if isinstance(event.get('message'), dict) else {}
+        entry = {
+            'time': datetime.utcnow().isoformat() + 'Z',
+            'path': request.path,
+            'status_code': status_code,
+            'payload_type': payload.get('type', ''),
+            'event_type': header.get('event_type', ''),
+            'has_token': bool(payload.get('token') or header.get('token')),
+            'message_type': message.get('message_type', ''),
+            'handled': result.get('handled') if isinstance(result, dict) else None,
+            'notification_status': result.get('notification_status') if isinstance(result, dict) else '',
+            'error': error,
+        }
+        with open(os.path.join(log_dir, 'lark_events.log'), 'a', encoding='utf-8') as handle:
+            handle.write(json.dumps(entry, ensure_ascii=False) + '\n')
+    except Exception as exc:
+        print(f'Lark event logging failed: {exc}')
+
+
+@app.route('/api/operator/comfort-events', methods=['GET'])
+@require_operator_auth
+def get_comfort_events():
+    limit = request.args.get('limit', default=100, type=int)
+    building_id = request.args.get('building_id', default=None, type=int)
+    limit = max(1, min(limit, 500))
+    return jsonify({
+        'events': db.get_comfort_events(limit=limit, building_id=building_id),
+    })
+
+
+@app.route('/api/operator/comfort-events/summary', methods=['GET'])
+@require_operator_auth
+def get_comfort_event_summary():
+    days = request.args.get('days', default=7, type=int)
+    building_id = request.args.get('building_id', default=None, type=int)
+    days = max(1, min(days, 365))
+    return jsonify({
+        'days': days,
+        'summary': db.get_comfort_event_summary(days=days, building_id=building_id),
+    })
+
+
+@app.route('/', methods=['POST'])
+@app.route('/lark/events', methods=['POST'])
+@app.route('/api/lark/events', methods=['POST'])
+def handle_lark_events():
+    payload = request.get_json(silent=True) or {}
+    if payload.get('type') == 'url_verification' and payload.get('challenge'):
+        log_lark_event(payload)
+        return jsonify({'challenge': payload['challenge']})
+
+    expected_token = comfort_notifications.LARK_VERIFICATION_TOKEN
+    header = payload.get('header') if isinstance(payload.get('header'), dict) else {}
+    payload_token = str(payload.get('token', '') or header.get('token', '') or '')
+    if expected_token and payload_token != expected_token:
+        log_lark_event(payload, status_code=403, error='Invalid Lark verification token')
+        return jsonify({'error': 'Invalid Lark verification token'}), 403
+
+    result = lark_commands.handle_lark_payload(payload)
+    log_lark_event(payload, result=result)
+    return jsonify(result)
 
 # ========== 传感器接口 ==========
 @app.route('/api/sensor/<int:building_id>', methods=['GET'])
@@ -303,12 +462,14 @@ def get_sensor_data(building_id):
         default_temperature=building_settings.get('default_temperature'),
         default_humidity=building_settings.get('default_humidity'),
     )
+    co2 = round(float(sensor_status.get('co2', building_settings.get('default_co2', 650.0))), 1)
     # 存储传感器数据到数据库
     db.add_sensor_data(building_id, temp, humi)
     return jsonify({
         'building_id': building_id,
         'temperature': temp,
         'humidity': humi,
+        'co2': co2,
         'read_time': datetime.utcnow().isoformat() + 'Z',
         'sensor_status': sensor_status,
     })
@@ -341,12 +502,14 @@ def get_raspberry_pi_sensor_detail(sensor_id):
         default_temperature=building_settings.get('default_temperature'),
         default_humidity=building_settings.get('default_humidity'),
     )
+    co2 = round(float(status.get('co2', building_settings.get('default_co2', 650.0))), 1)
     db.add_sensor_data(sensor.REAL_SENSOR_BUILDING_ID, temperature, humidity)
     return jsonify({
         'interface_id': sensor_status['interface_id'],
         'label': sensor_status['label'],
         'temperature': temperature,
         'humidity': humidity,
+        'co2': co2,
         'read_time': datetime.utcnow().isoformat() + 'Z',
         'status': status,
     })

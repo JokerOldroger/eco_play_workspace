@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router';
 import { Thermometer, Droplets, Wind } from 'lucide-react';
 import HKUSTLogo from '../../imports/Hong_Kong_University_of_Science_and_Technology_symbol.svg';
@@ -15,6 +15,15 @@ import {
   updateVotes,
 } from '@/api/ecoApi';
 
+type VoteType = 'too_cold' | 'comfort' | 'too_warm';
+
+type VoteFeedbackEffect = {
+  type: VoteType;
+  emoji: string;
+  message: string;
+  panelClass: string;
+};
+
 const emptyVotes: BuildingVotes = {
   building_id: 0,
   too_cold: 0,
@@ -30,8 +39,11 @@ const fallbackSensor: SensorReading = {
   building_id: 0,
   temperature: 0,
   humidity: 0,
+  co2: 0,
   read_time: '',
 };
+const DEFAULT_BUILDING_NAME = 'Sustainability Office';
+const SENSOR_REFRESH_MS = 3000;
 
 function buildEmptyVotes(buildingId: number): BuildingVotes {
   return {
@@ -49,8 +61,11 @@ export function VotePage() {
   const [sensor, setSensor] = useState<SensorReading>(fallbackSensor);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittingVoteType, setSubmittingVoteType] = useState<'too_cold' | 'comfort' | 'too_warm' | null>(null);
+  const [submittingVoteType, setSubmittingVoteType] = useState<VoteType | null>(null);
+  const [pressedVoteType, setPressedVoteType] = useState<VoteType | null>(null);
+  const [voteFeedbackEffect, setVoteFeedbackEffect] = useState<VoteFeedbackEffect | null>(null);
   const [error, setError] = useState('');
+  const optimisticVotesRef = useRef<BuildingVotes | null>(null);
 
   const selectedBuilding = buildings.find((building) => building.id === selectedBuildingId) ?? null;
   const buildingParam = searchParams.get('building');
@@ -79,6 +94,7 @@ export function VotePage() {
 
       const buildingFromUrl = getBuildingFromParam(buildingList, buildingParam);
       const savedBuildingId = getSavedBuildingId(isPublicView);
+      const defaultBuildingId = buildingList.find((building) => building.name === DEFAULT_BUILDING_NAME)?.id;
 
       const nextSelectedId =
         buildingFromUrl?.id ??
@@ -88,6 +104,8 @@ export function VotePage() {
           ? preferredBuildingId
           : selectedBuildingId && buildingList.some((building) => building.id === selectedBuildingId)
           ? selectedBuildingId
+          : defaultBuildingId
+          ? defaultBuildingId
           : buildingList[0].id);
       setSelectedBuildingId(nextSelectedId);
     } catch (loadError) {
@@ -160,6 +178,13 @@ export function VotePage() {
           return;
         }
 
+        const optimisticVotes = optimisticVotesRef.current;
+        if (optimisticVotes && voteData.total < optimisticVotes.total) {
+          return;
+        }
+        if (optimisticVotes && voteData.total >= optimisticVotes.total) {
+          optimisticVotesRef.current = null;
+        }
         setVotes(voteData);
         setSensor(sensorData);
       } catch (loadError) {
@@ -180,7 +205,7 @@ export function VotePage() {
     loadBuildingData(true);
     const intervalId = window.setInterval(() => {
       loadBuildingData(false);
-    }, 10000);
+    }, SENSOR_REFRESH_MS);
 
     return () => {
       cancelled = true;
@@ -188,10 +213,40 @@ export function VotePage() {
     };
   }, [selectedBuilding]);
 
-  const handleVote = async (type: 'too_cold' | 'comfort' | 'too_warm') => {
+  const handleVote = async (type: VoteType) => {
     if (!selectedBuilding || isSubmitting) {
       return;
     }
+
+    // Keep a brief visual feedback even if submit returns quickly.
+    setPressedVoteType(type);
+    window.setTimeout(() => {
+      setPressedVoteType((previousType) => (previousType === type ? null : previousType));
+    }, 700);
+    const effectByType: Record<VoteType, VoteFeedbackEffect> = {
+      too_cold: {
+        type: 'too_cold',
+        emoji: '🥶',
+        message: 'Thanks for your feedback',
+        panelClass: 'from-blue-200/95 to-blue-400/90 text-blue-900',
+      },
+      comfort: {
+        type: 'comfort',
+        emoji: '😌',
+        message: 'Thanks for your feedback',
+        panelClass: 'from-green-200/95 to-green-400/90 text-green-900',
+      },
+      too_warm: {
+        type: 'too_warm',
+        emoji: '🥵',
+        message: 'Thanks for your feedback',
+        panelClass: 'from-orange-200/95 to-orange-400/90 text-orange-900',
+      },
+    };
+    setVoteFeedbackEffect(effectByType[type]);
+    window.setTimeout(() => {
+      setVoteFeedbackEffect((previousEffect) => (previousEffect?.type === type ? null : previousEffect));
+    }, 1000);
 
     const nextVotes: BuildingVotes = {
       ...votes,
@@ -204,6 +259,7 @@ export function VotePage() {
 
     const previousVotes = votes;
     setVotes(nextVotes);
+    optimisticVotesRef.current = nextVotes;
     setIsSubmitting(true);
     setSubmittingVoteType(type);
     setError('');
@@ -214,9 +270,18 @@ export function VotePage() {
         comfort: nextVotes.comfort,
         too_warm: nextVotes.too_warm,
         total: nextVotes.total,
+        sensor: {
+          temperature: sensor.temperature,
+          humidity: sensor.humidity,
+          co2: sensor.co2,
+          read_time: sensor.read_time,
+        },
       });
+      // Ensure UI stays at least on the just-submitted count.
+      setVotes(nextVotes);
     } catch (submitError) {
       setVotes(previousVotes);
+      optimisticVotesRef.current = null;
       setError(submitError instanceof Error ? submitError.message : 'Failed to submit vote');
     } finally {
       setIsSubmitting(false);
@@ -225,11 +290,56 @@ export function VotePage() {
   };
 
   const publicVoteCardClass = 'px-4 py-4 min-h-[112px]';
-  const publicVoteLabelClass = 'text-xl';
+  const publicVoteLabelClass = 'text-3xl sm:text-4xl';
   const publicVoteIconClass = 'text-3xl';
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white">
+      <style>
+        {`
+          @keyframes vote-feedback-pop {
+            0% { opacity: 0; transform: scale(0.85) translateY(10px); }
+            18% { opacity: 1; transform: scale(1.03) translateY(0); }
+            72% { opacity: 1; transform: scale(1) translateY(0); }
+            100% { opacity: 0; transform: scale(0.98) translateY(4px); }
+          }
+          @-webkit-keyframes vote-feedback-pop {
+            0% { opacity: 0; -webkit-transform: scale(0.85) translateY(10px); }
+            18% { opacity: 1; -webkit-transform: scale(1.03) translateY(0); }
+            72% { opacity: 1; -webkit-transform: scale(1) translateY(0); }
+            100% { opacity: 0; -webkit-transform: scale(0.98) translateY(4px); }
+          }
+          .vote-feedback-pop {
+            animation: vote-feedback-pop 1.2s ease-out;
+            -webkit-animation: vote-feedback-pop 1.2s ease-out;
+            transform-origin: center;
+            will-change: transform, opacity;
+          }
+          @keyframes vote-button-bump {
+            0% { transform: scale(1); }
+            35% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+          }
+          @-webkit-keyframes vote-button-bump {
+            0% { -webkit-transform: scale(1); }
+            35% { -webkit-transform: scale(1.08); }
+            100% { -webkit-transform: scale(1); }
+          }
+          .vote-button-bump {
+            animation: vote-button-bump 0.65s ease-out;
+            -webkit-animation: vote-button-bump 0.65s ease-out;
+            will-change: transform;
+          }
+        `}
+      </style>
+      {voteFeedbackEffect ? (
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/25 px-4">
+          <div className={`vote-feedback-pop rounded-3xl bg-gradient-to-b shadow-2xl px-8 py-6 text-center ${voteFeedbackEffect.panelClass}`}>
+            <div className="text-7xl sm:text-8xl leading-none">{voteFeedbackEffect.emoji}</div>
+            <p className="mt-4 text-2xl sm:text-3xl font-bold">{voteFeedbackEffect.message}</p>
+          </div>
+        </div>
+      ) : null}
       <div className="flex-1 min-h-0 overflow-y-auto">
       <div className={`flex ${isPublicView ? 'flex-col' : 'items-center justify-center'} bg-white border-b border-gray-200 gap-2 px-4 ${isPublicView ? 'py-2' : 'py-4 sm:gap-3 sm:py-4'}`}>
         <img src={HKUSTLogo} alt="HKUST Logo" className={`${isPublicView ? 'h-8' : 'h-10 sm:h-12'} mx-auto`} />
@@ -282,7 +392,7 @@ export function VotePage() {
         <div className={`flex items-center justify-center gap-2 bg-white rounded-lg border border-gray-200 ${isPublicView ? 'py-3' : 'py-4 sm:py-3'}`}>
           <Wind className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" />
           <span className={`${isPublicView ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'} text-gray-800`}>
-            {isPublicView ? '650 ppm' : selectedBuilding ? `ID ${selectedBuilding.id}` : '--'}
+            {isLoading ? '--' : `CO2 ${sensor.co2.toFixed(0)} ppm`}
           </span>
         </div>
       </div>
@@ -291,30 +401,39 @@ export function VotePage() {
         <button
           onClick={() => handleVote('too_cold')}
           disabled={!selectedBuilding || isSubmitting}
-          className={`flex flex-col items-center justify-center ${isPublicView ? 'gap-2' : 'gap-3'} bg-blue-400 hover:bg-blue-500 text-white rounded-2xl transition-colors ${submittingVoteType === 'too_cold' ? 'ring-4 ring-blue-200/70 scale-[0.99]' : ''} ${isPublicView ? publicVoteCardClass : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
+          className={`relative flex flex-col items-center justify-center ${isPublicView ? 'gap-2' : 'gap-3'} bg-blue-400 hover:bg-blue-500 active:scale-[0.98] active:brightness-95 text-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-150 ${submittingVoteType === 'too_cold' || pressedVoteType === 'too_cold' ? 'ring-4 ring-blue-200/80 scale-[0.98] shadow-xl' : ''} ${pressedVoteType === 'too_cold' ? 'vote-button-bump' : ''} ${isPublicView ? publicVoteCardClass : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
         >
+          <div className="absolute right-3 top-3 rounded-full bg-white/25 px-3 py-1 text-base sm:text-lg font-bold tabular-nums">
+            {votes.too_cold}
+          </div>
           <div className={`${isPublicView ? publicVoteIconClass : 'text-4xl lg:text-5xl'}`}>❄️</div>
-          <div className={`${isPublicView ? publicVoteLabelClass : 'text-2xl lg:text-3xl'} font-bold`}>Too Cold</div>
+          <div className={`${isPublicView ? publicVoteLabelClass : 'text-4xl lg:text-5xl'} font-bold`}>Too Cold</div>
           <div className="text-sm">{isPublicView ? '' : `${votes.too_cold_percent}%`}</div>
         </button>
 
         <button
           onClick={() => handleVote('comfort')}
           disabled={!selectedBuilding || isSubmitting}
-          className={`flex flex-col items-center justify-center ${isPublicView ? 'gap-2' : 'gap-3'} bg-green-500 hover:bg-green-600 text-white rounded-2xl transition-colors ${submittingVoteType === 'comfort' ? 'ring-4 ring-green-200/70 scale-[0.99]' : ''} ${isPublicView ? publicVoteCardClass : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
+          className={`relative flex flex-col items-center justify-center ${isPublicView ? 'gap-2' : 'gap-3'} bg-green-500 hover:bg-green-600 active:scale-[0.98] active:brightness-95 text-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-150 ${submittingVoteType === 'comfort' || pressedVoteType === 'comfort' ? 'ring-4 ring-green-200/80 scale-[0.98] shadow-xl' : ''} ${pressedVoteType === 'comfort' ? 'vote-button-bump' : ''} ${isPublicView ? publicVoteCardClass : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
         >
+          <div className="absolute right-3 top-3 rounded-full bg-white/25 px-3 py-1 text-base sm:text-lg font-bold tabular-nums">
+            {votes.comfort}
+          </div>
           <div className={`${isPublicView ? publicVoteIconClass : 'text-4xl lg:text-5xl'}`}>☀️</div>
-          <div className={`${isPublicView ? publicVoteLabelClass : 'text-2xl lg:text-3xl'} font-bold`}>Comfort</div>
+          <div className={`${isPublicView ? publicVoteLabelClass : 'text-4xl lg:text-5xl'} font-bold`}>Comfort</div>
           <div className="text-sm">{isPublicView ? '' : `${votes.comfort_percent}%`}</div>
         </button>
 
         <button
           onClick={() => handleVote('too_warm')}
           disabled={!selectedBuilding || isSubmitting}
-          className={`flex flex-col items-center justify-center ${isPublicView ? 'gap-2' : 'gap-3'} bg-orange-500 hover:bg-orange-600 text-white rounded-2xl transition-colors ${submittingVoteType === 'too_warm' ? 'ring-4 ring-orange-200/70 scale-[0.99]' : ''} ${isPublicView ? publicVoteCardClass : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
+          className={`relative flex flex-col items-center justify-center ${isPublicView ? 'gap-2' : 'gap-3'} bg-orange-500 hover:bg-orange-600 active:scale-[0.98] active:brightness-95 text-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-150 ${submittingVoteType === 'too_warm' || pressedVoteType === 'too_warm' ? 'ring-4 ring-orange-200/80 scale-[0.98] shadow-xl' : ''} ${pressedVoteType === 'too_warm' ? 'vote-button-bump' : ''} ${isPublicView ? publicVoteCardClass : 'px-6 py-7 min-h-[170px] md:min-h-[220px]'}`}
         >
+          <div className="absolute right-3 top-3 rounded-full bg-white/25 px-3 py-1 text-base sm:text-lg font-bold tabular-nums">
+            {votes.too_warm}
+          </div>
           <div className={`${isPublicView ? publicVoteIconClass : 'text-4xl lg:text-5xl'}`}>🔥</div>
-          <div className={`${isPublicView ? publicVoteLabelClass : 'text-2xl lg:text-3xl'} font-bold`}>Too Warm</div>
+          <div className={`${isPublicView ? publicVoteLabelClass : 'text-4xl lg:text-5xl'} font-bold`}>Too Warm</div>
           <div className="text-sm">{isPublicView ? '' : `${votes.too_warm_percent}%`}</div>
         </button>
       </div>
@@ -323,7 +442,7 @@ export function VotePage() {
         {error ? (
           <p className="text-sm text-red-600">{error}</p>
         ) : (
-          <p className={`${isPublicView ? 'text-sm leading-6' : 'text-sm sm:text-base leading-6 sm:leading-tight'} text-gray-700`}>
+          <p className={`${isPublicView ? 'text-lg sm:text-xl leading-8' : 'text-lg sm:text-2xl leading-8 sm:leading-10'} font-medium text-gray-700`}>
             {isPublicView ? 'Votes (Session):' : 'Votes Today:'}
             <span className="text-blue-600 font-semibold"> Too Cold: {votes.too_cold}</span>
             {' | '}

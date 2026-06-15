@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=EcoPlay Frontend 60%
+Comment=Open the EcoPlay frontend at 60 percent scale
+Exec=/home/ecoplay/eco_play_workspace/scripts/open_ecoplay_frontend.sh
+Terminal=false
+Categories=Utility;
